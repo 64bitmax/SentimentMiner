@@ -1,23 +1,24 @@
+import com.mongodb.client.MongoDatabase;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
-public class Miner {
+class Miner {
     private Twitter twitter;
     private List<University> universities;
     private HashMap<University, List<Status>> universityTweets;
+    private File file;
 
-    public Miner() {
+    Miner() {
         universities = new ArrayList<>();
         universityTweets = new HashMap<>();
+        file = new File("/Users/Max/Desktop/universityTweets.txt");
         initialize();
     }
 
@@ -62,7 +63,7 @@ public class Miner {
      *              - 250 for past 30 days
      *              - 50 for full archive
      */
-    public void searchForUniversities() {
+    void searchForUniversities() {
         for(University university : universities) {
             try {
                 Query query = new Query(university.getName());
@@ -76,6 +77,55 @@ public class Miner {
                 System.out.println("Failure to search for tweets: " + e.getMessage());
                 System.exit(-1);
             }
+        }
+    }
+
+    void searchOxfordBrookes(String universityName, String universityHandle) {
+        try {
+            FileOutputStream outputStream = new FileOutputStream(file);
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+
+            Query query = new Query(universityName);
+            query.setCount(100);
+            query.setLang("en");
+            QueryResult result;
+            do {
+                result = twitter.search(query);
+                for(Status tweet : result.getTweets()) {
+                    if(!tweet.getUser().getScreenName().equals(universityName) && !tweet.getUser().getName().equals(universityName) ||
+                            !tweet.getUser().getName().equals(universityHandle) && !tweet.getUser().getScreenName().equals(universityHandle)) {
+                        System.out.println("Tweet information: " + tweet.getText());
+                        writer.write(tweet.getText());
+                        writer.newLine();
+                    }
+                }
+                universityTweets.put(new University(universityName), result.getTweets());
+            } while ((query = result.nextQuery()) != null);
+            writer.close();
+        } catch (TwitterException e) {
+            e.printStackTrace();
+            System.out.println("Twitter search failed for " + universityName + ": " + e.getMessage());
+            System.exit(-1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void fileToDatabase(String address, int port, String databaseName, String tableName) {
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+
+            DBConnector connector = new DBConnector(address, port);
+            MongoDatabase database = connector.getDatabase(databaseName);
+            connector.createTable(database, tableName);
+
+            String tweet;
+            while((tweet = reader.readLine()) != null) {
+                connector.addDocument(database, tableName, "tweet", tweet);
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
