@@ -1,3 +1,5 @@
+import com.mongodb.MongoCommandException;
+import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
@@ -8,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 class Miner {
     private Twitter twitter;
@@ -36,7 +39,8 @@ class Miner {
                 .setOAuthConsumerKey("aedewbUEnQXzSKt5Te1eWMoMy")
                 .setOAuthConsumerSecret("832VQRuOeCiKfcniXGq7jy7BTRDe4RHEkWE4dsQrZW9ABlMfnh")
                 .setOAuthAccessToken("1057730086252756997-NUdLXOOehBTkdIPwF9La2iySMbY3OR")
-                .setOAuthAccessTokenSecret("SnbOvE7LvYxE5ePK6ytAf6Toi6x8sGkMtPyXCm1cIsI61");
+                .setOAuthAccessTokenSecret("SnbOvE7LvYxE5ePK6ytAf6Toi6x8sGkMtPyXCm1cIsI61")
+                .setTweetModeExtended(true);
         TwitterFactory twitterFactory = new TwitterFactory(cb.build());
         twitter = twitterFactory.getInstance();
     }
@@ -80,27 +84,52 @@ class Miner {
         }
     }
 
-    void searchOxfordBrookes(String universityName, String universityHandle) {
+    void searchUniversityTweets(String universityName, String universityHandle, int numberTweets) {
         try {
             FileOutputStream outputStream = new FileOutputStream(file);
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
 
+            ArrayList<Status> tweets = new ArrayList<>();
+            ArrayList<String> validTweets = new ArrayList<>();
+
+            Long endID = Long.MAX_VALUE;
             Query query = new Query(universityName);
-            query.setCount(100);
             query.setLang("en");
-            QueryResult result;
-            do {
-                result = twitter.search(query);
+
+            while(tweets.size() < numberTweets) {
+                if (numberTweets - tweets.size() > 100) {
+                    query.setCount(100);
+                }
+                else {
+                    query.setCount(numberTweets - tweets.size());
+                }
+                QueryResult result = twitter.search(query);
                 for(Status tweet : result.getTweets()) {
                     if(!tweet.getUser().getScreenName().equals(universityName) && !tweet.getUser().getName().equals(universityName) ||
                             !tweet.getUser().getName().equals(universityHandle) && !tweet.getUser().getScreenName().equals(universityHandle)) {
-                        System.out.println("Tweet information: " + tweet.getText());
-                        writer.write(tweet.getText());
+                        if(tweet.isRetweet()) {
+                            if(!validTweets.contains(tweet.getRetweetedStatus().getText())) {
+                                System.out.println("Tweet information: " + tweet.getRetweetedStatus().getText());
+                                validTweets.add(tweet.getRetweetedStatus().getText());
+                                writer.write(tweet.getRetweetedStatus().getText());
+                                tweets.add(tweet);
+                            }
+                        } else {
+                            if(!validTweets.contains(tweet.getText())) {
+                                System.out.println("Tweet information: " + tweet.getText());
+                                validTweets.add(tweet.getText());
+                                writer.write(tweet.getText());
+                                tweets.add(tweet);
+                            }
+                        }
                         writer.newLine();
                     }
                 }
-                universityTweets.put(new University(universityName), result.getTweets());
-            } while ((query = result.nextQuery()) != null);
+                for (Status tweet: tweets)
+                    if(tweet.getId() < endID) endID = tweet.getId();
+                query.setMaxId(endID - 1);
+            }
+            universityTweets.put(new University(universityName), tweets);
             writer.close();
         } catch (TwitterException e) {
             e.printStackTrace();
@@ -126,6 +155,8 @@ class Miner {
             reader.close();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (MongoCommandException e) {
+            System.out.println("ERROR: Try deleting the table in MongoDB before sending the file contents to the database.");
         }
     }
 }
