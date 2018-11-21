@@ -26,23 +26,29 @@ class Miner {
     }
 
     private void initialize() {
-        authenticateApplication();
         loadUniversityNames();
     }
 
     /**
      * Authenticates the Twitter application using Twitter developer authentication keys
      */
-    private void authenticateApplication() {
+    boolean authenticateApplication(String consumerKey, String consumerSecret, String accessToken, String accessTokenSecret) {
         ConfigurationBuilder cb = new ConfigurationBuilder();
         cb.setDebugEnabled(true)
-                .setOAuthConsumerKey("aedewbUEnQXzSKt5Te1eWMoMy")
-                .setOAuthConsumerSecret("832VQRuOeCiKfcniXGq7jy7BTRDe4RHEkWE4dsQrZW9ABlMfnh")
-                .setOAuthAccessToken("1057730086252756997-NUdLXOOehBTkdIPwF9La2iySMbY3OR")
-                .setOAuthAccessTokenSecret("SnbOvE7LvYxE5ePK6ytAf6Toi6x8sGkMtPyXCm1cIsI61")
+                .setOAuthConsumerKey(consumerKey)
+                .setOAuthConsumerSecret(consumerSecret)
+                .setOAuthAccessToken(accessToken)
+                .setOAuthAccessTokenSecret(accessTokenSecret)
                 .setTweetModeExtended(true);
         TwitterFactory twitterFactory = new TwitterFactory(cb.build());
         twitter = twitterFactory.getInstance();
+
+        try {
+            User user = twitter.verifyCredentials();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -67,23 +73,6 @@ class Miner {
      *              - 250 for past 30 days
      *              - 50 for full archive
      */
-    void searchForUniversities() {
-        for(University university : universities) {
-            try {
-                Query query = new Query(university.getName());
-                QueryResult result;
-                do {
-                    result = twitter.search(query);
-                    universityTweets.put(university, result.getTweets());
-                } while ((query = result.nextQuery()) != null);
-            } catch (TwitterException e) {
-                e.printStackTrace();
-                System.out.println("Failure to search for tweets: " + e.getMessage());
-                System.exit(-1);
-            }
-        }
-    }
-
     void searchUniversityTweets(String universityName, String universityHandle, int numberTweets) {
         try {
             FileOutputStream outputStream = new FileOutputStream(file);
