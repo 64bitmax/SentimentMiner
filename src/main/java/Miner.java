@@ -1,24 +1,21 @@
 import com.mongodb.MongoCommandException;
-import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
 
 import java.io.*;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Scanner;
-import java.util.logging.Logger;
+import java.util.*;
 
-class Miner {
+class Miner{
     private Twitter twitter;
     private List<University> universities;
     private HashMap<University, List<Status>> universityTweets;
     private File file;
+    private DBConnector dbConnector;
 
-    Miner() {
+    Miner() throws IOException {
+        dbConnector = new DBConnector();
         universities = new ArrayList<>();
         universityTweets = new HashMap<>();
         file = new File("/Users/Max/Desktop/universityTweets.txt");
@@ -129,17 +126,15 @@ class Miner {
         }
     }
 
-    void fileToDatabase(String address, int port, String databaseName, String tableName) {
+    void fileToDatabase(String databaseName, String tableName) {
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));
-
-            DBConnector connector = new DBConnector(address, port);
-            MongoDatabase database = connector.getDatabase(databaseName);
-            connector.createTable(database, tableName);
+            MongoDatabase database = dbConnector.getDatabase(databaseName);
+            dbConnector.createTable(database, tableName);
 
             String tweet;
             while((tweet = reader.readLine()) != null) {
-                connector.addDocument(database, tableName, "tweet", tweet);
+                dbConnector.addDocument(database, tableName, "tweet", tweet);
             }
             reader.close();
         } catch (IOException e) {
@@ -148,4 +143,15 @@ class Miner {
             System.out.println("ERROR: Try deleting the table in MongoDB before sending the file contents to the database.");
         }
     }
+
+    void sendUniversitiesToDatabase(String databaseName, String tableName) {
+        loadUniversityNames();
+        MongoDatabase database = dbConnector.getDatabase(databaseName);
+        dbConnector.createTable(database, tableName);
+
+        for (University uni : universities) {
+            dbConnector.addDocument(database, tableName, "university", uni.getName());
+        }
+    }
+
 }

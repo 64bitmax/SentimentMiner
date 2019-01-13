@@ -1,33 +1,38 @@
+import java.io.IOException;
+
 public class Main {
     public static void main(String[] args) {
         String command = "";
         do {
-            System.out.println("Please validate keys before use: ");
-            System.out.println("OAuthConsumerKey: ");
-            String OAuthConsumerKey = Utilities.INPUT_SCANNER.nextLine();
-            System.out.println("OAuthConsumerSecret: ");
-            String OAuthConsumerSecret = Utilities.INPUT_SCANNER.nextLine();
-            System.out.println("OAuthAccessToken: ");
-            String OAuthAccessToken = Utilities.INPUT_SCANNER.nextLine();
-            System.out.println("OAuthAccessTokenSecret: ");
-            String OAuthAccessTokenSecret = Utilities.INPUT_SCANNER.nextLine();
+            try {
+                TwitterConfig twitterConfig = new TwitterConfig();
 
-            Miner miner = new Miner();
-            boolean valid = miner.authenticateApplication(OAuthConsumerKey, OAuthConsumerSecret, OAuthAccessToken, OAuthAccessTokenSecret);
+                Miner miner = new Miner();
+                boolean valid = miner.authenticateApplication(
+                        twitterConfig.getAuthConsumerKey(),
+                        twitterConfig.getAuthConsumerSecret(),
+                        twitterConfig.getAuthAccessToken(),
+                        twitterConfig.getAuthAccessTokenSecret());
 
-            if(valid) {
-                System.out.println("Credentials verified successfully.\n");
-                System.out.print("Enter a command [SEARCH, SAVEDB]: ");
-                command = Utilities.INPUT_SCANNER.nextLine();
-                if(command.equals("SEARCH")) {
-                    miner.searchUniversityTweets("Oxford Brookes", "oxford_brookes", 10000);
-                } else if(command.equals("SAVEDB")) {
-                    miner.fileToDatabase("ec2-3-8-1-226.eu-west-2.compute.amazonaws.com",27017, "data_miner", "original_tweets");
+                if(valid) {
+                    System.out.println("Credentials verified successfully.\n");
+                    System.out.print("Enter a command [SEARCH, SAVEDB]: ");
+                    command = Utilities.INPUT_SCANNER.nextLine();
+                    if(command.equals("SEARCH")) {
+                        miner.searchUniversityTweets("Oxford Brookes", "oxford_brookes", 20000);
+                    } else if(command.equals("SAVEDB")) {
+                        miner.fileToDatabase( "data_miner", "original_tweets");
+                    } else if (command.equals("SAVEUNI")) {
+                        miner.sendUniversitiesToDatabase("university_info", "universities_2018");
+                    }
+                } else {
+                    System.out.println("Failed to verify credentials.");
+                    System.exit(1);
                 }
-            } else {
-                System.out.println("Failed to verify credentials.");
-                System.exit(1);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
+
         } while(!command.equals("STOP"));
     }
 }

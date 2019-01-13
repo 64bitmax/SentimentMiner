@@ -1,4 +1,3 @@
-import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
@@ -8,24 +7,28 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
+import java.io.IOException;
 import java.util.Collections;
 
 class DBConnector {
-    private final MongoClient CLIENT;
+    private final MongoClient client;
+    private DBConfig dbConfig;
 
-    DBConnector(String address, int port) {
-        MongoCredential credential = MongoCredential.createCredential("admin", "admin", "password".toCharArray());
-        CLIENT = MongoClients.create(
+    DBConnector() throws IOException {
+        dbConfig = new DBConfig();
+
+        MongoCredential credential = MongoCredential.createCredential(dbConfig.getUsername(), dbConfig.getAuthDb(), dbConfig.getPassword().toCharArray());
+        client = MongoClients.create(
                 MongoClientSettings.builder()
                         .credential(credential)
                         .applyToClusterSettings(builder ->
-                                builder.hosts(Collections.singletonList(new ServerAddress(address, port))))
+                                builder.hosts(Collections.singletonList(new ServerAddress(dbConfig.getAddress(), dbConfig.getPort()))))
                         .build());
     }
 
     MongoDatabase getDatabase(String name) {
         if(!name.isEmpty()) {
-            return CLIENT.getDatabase(name);
+            return client.getDatabase(name);
         }
         return null;
     }
