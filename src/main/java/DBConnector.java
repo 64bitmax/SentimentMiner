@@ -1,29 +1,25 @@
-import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.*;
 import org.bson.Document;
 
 import java.io.IOException;
-import java.util.Collections;
 
 class DBConnector {
     private final MongoClient client;
     private DBConfig dbConfig;
 
     DBConnector() throws IOException {
-        dbConfig = new DBConfig();
+         dbConfig = new DBConfig();
 
-        MongoCredential credential = MongoCredential.createCredential(dbConfig.getUsername(), dbConfig.getAuthDb(), dbConfig.getPassword().toCharArray());
-        client = MongoClients.create(
-                MongoClientSettings.builder()
-                        .credential(credential)
-                        .applyToClusterSettings(builder ->
-                                builder.hosts(Collections.singletonList(new ServerAddress(dbConfig.getAddress(), dbConfig.getPort()))))
-                        .build());
+//        MongoCredential credential = MongoCredential.createCredential(dbConfig.getUsername(), dbConfig.getAuthDb(), dbConfig.getPassword().toCharArray());
+//        client = MongoClients.create(
+//                MongoClientSettings.builder()
+//                        .credential(credential)
+//                        .applyToClusterSettings(builder ->
+//                                builder.hosts(Collections.singletonList(new ServerAddress(dbConfig.getAddress(), dbConfig.getPort()))))
+//                        .build());
+
+
+        client = MongoClients.create(dbConfig.getURI());
     }
 
     MongoDatabase getDatabase(String name) {
@@ -34,7 +30,22 @@ class DBConnector {
     }
 
     void createTable(MongoDatabase database, String tableName) {
-        database.createCollection(tableName);
+        boolean exists = checkTable(database, tableName);
+        if(!exists) {
+            database.createCollection(tableName);
+        }
+    }
+
+    boolean checkTable (MongoDatabase database, String table) {
+        MongoIterable<String> names = database.listCollectionNames();
+
+        for(String name : names) {
+            if(name.equals(table)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void addDocument(MongoDatabase database, String tableName, String id, String tweet) {

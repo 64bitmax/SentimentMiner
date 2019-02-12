@@ -3,11 +3,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public class DBConfig {
-    private String address;
-    private int port;
-    private String authDb;
-    private String username;
-    private String password;
+    private String URI;
 
     public DBConfig() throws IOException {
         getValues();
@@ -18,32 +14,11 @@ public class DBConfig {
         String fileName = "database-config.properties";
         InputStream inputStream = getClass().getClassLoader().getResourceAsStream(fileName);
         prop.load(inputStream);
-        address = prop.getProperty("address");
-        port = Integer.valueOf(prop.getProperty("port"));
-        authDb = prop.getProperty("authDb");
-        username = prop.getProperty("username");
-        password = prop.getProperty("password");
+        URI = prop.getProperty("uri");
     }
 
-    public String getAddress() {
-        return address;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public String getAuthDb() {
-        return authDb;
-    }
-
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
+    public String getURI() {
+        return URI;
     }
 
 }
